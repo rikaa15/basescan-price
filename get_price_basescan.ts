@@ -19,7 +19,7 @@ const MINT_TXS = [
 ];
 
 const BURN_TXS = [
-
+  
 ];
 const WRITE_CSV = true;
 
