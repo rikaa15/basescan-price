@@ -17,21 +17,23 @@ Create `.env` in project root:
 Add  `BASE_RPC_URL` and `BASESCAN_API_KEY` (as in .env.example)
 
 
-### Provide inputs (Mint/Burn TX arrays)
-Edit `get_price_basescan.ts` and modify the arrays near the top:
-```ts
-const MINT_TXS = [
-  "0x...",
-  // add more mint tx hashes
-];
+### Provide inputs via CSV
+Place `actions.csv` from timeline script as `input.csv` in the project root (or set `INPUT_CSV` in `.env`). Required columns:
 
-const BURN_TXS = [
-  "0x...",
-  // add more burn tx hashes
-];
+```csv
+timestamp,block_number,tx_index,tx_hash,action,log_index,token_id,tick_lower,tick_upper,liquidity,amount0,amount1,amount0_dec,amount1_dec,fee0,fee1,fee0_dec,fee1_dec,details
 ```
-- Mint TXs: script finds the latest Swap strictly before each Mint within the same block (or earlier blocks).
-- Burn TXs: script finds the earliest Swap strictly after each Burn within the same block (or later blocks).
+
+- Only `action` and `tx_hash` are used by the script; other columns are ignored.
+- Supported `action` values and the price selection rule:
+  - `mint`: latest swap strictly before (same-block swaps must have lower log index)
+  - `burn`: earliest swap strictly after (same-block swaps must have higher log index)
+  - `collect`: earliest swap strictly after
+  - `gauge_deposit`: latest swap strictly before
+  - `gauge_withdraw`: earliest swap strictly after
+  - `gauge_getReward`: earliest swap strictly after
+
+If `input.csv` is missing or doesn’t contain `action`/`tx_hash`, the script falls back to the arrays in `get_price_basescan.ts`.
 
 ### Run
 ```bash
@@ -41,10 +43,10 @@ npm run start
 ### Output
 - File path: `output/prices_basescan_{startBlock}_{lastBlock}.csv`
 - Columns:
-  - `block`: pivot (mint/burn) block number
+  - `block`: pivot block number
   - `closest_block`: chosen swap block number
   - `block_index`: chosen swap log index within the block
-  - `side`: `mint` (before) or `burn` (after)
+  - `side`: one of `mint`, `burn`, `collect`, `gauge_deposit`, `gauge_withdraw`, `gauge_getReward`
   - `timestamp`: ISO8601 of chosen swap block timestamp
   - `tx_hash`: chosen swap transaction hash
   - `price_usdc_per_cbbtc`: price derived from sqrtPriceX96
